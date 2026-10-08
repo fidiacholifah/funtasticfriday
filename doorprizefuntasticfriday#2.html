@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rektorat Funtastic Friday - Realtime Spin Wheel</title>
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Firebase v8 Compatibility SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandBlue: {
+              DEFAULT: '#0A2540',
+              light: '#1E40AF',
+              dark: '#081A2F',
+              accent: '#0052CC'
+            },
+            brandYellow: {
+              DEFAULT: '#FFC700',
+              hover: '#E5B200',
+              accent: '#FFF066'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #081A2F;
+      color: #F8FAFC;
+    }
+    .gradient-header {
+      background: linear-gradient(135deg, #0A2540 0%, #102A45 50%, #1E40AF 100%);
+    }
+    .gold-glow {
+      box-shadow: 0 0 25px rgba(255, 199, 0, 0.4);
+    }
+    .wheel-pointer {
+      width: 0; 
+      height: 0; 
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 35px solid #FFC700;
+      filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.5));
+    }
+    #wheelCanvas {
+      transition: transform 4.5s cubic-bezier(0.15, 0.85, 0.15, 1);
+      transform-origin: center center;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col select-none">
+
+  <!-- HEADER DENGAN ORNAMEN & INFORMASI FUNTASTIC FRIDAY -->
+  <header class="gradient-header border-b-4 border-brandYellow p-4 md:p-6 relative overflow-hidden shadow-2xl">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+      
+      <!-- Sub-header & Title -->
+      <div class="text-center md:text-left space-y-2">
+        <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
+          <span class="inline-flex items-center gap-2 px-3 py-1 bg-brandYellow text-brandBlue-dark font-extrabold text-xs rounded-full uppercase shadow">
+            <i class="fa-solid fa-graduation-cap"></i> SDM / Sekolah Kepemimpinan UII
+          </span>
+          <!-- Role Indicator Badge -->
+          <span id="roleBadge" class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-900 text-blue-200 border border-blue-400/40 text-xs font-bold rounded-full uppercase">
+            <i class="fa-solid fa-eye"></i> Mode Viewer
+          </span>
+        </div>
+
+        <h1 class="text-2xl md:text-4xl font-black tracking-tight text-white uppercase drop-shadow-md">
+          Rektorat <span class="text-brandYellow">Funtastic Friday</span>
+        </h1>
+        <p class="text-base md:text-lg font-bold text-blue-200 tracking-wide">
+          FUN-RUN 5K &amp; FUN-WALK 3KM
+        </p>
+
+        <!-- Slogan Badges -->
+        <div class="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
+          <span class="px-3 py-1 bg-blue-900/80 border border-blue-400/30 text-yellow-300 rounded-lg text-xs font-bold">
+            <i class="fa-solid fa-person-running"></i> BUGAR
+          </span>
+          <span class="px-3 py-1 bg-blue-900/80 border border-blue-400/30 text-yellow-300 rounded-lg text-xs font-bold">
+            <i class="fa-solid fa-bolt"></i> PRODUKTIF
+          </span>
+          <span class="px-3 py-1 bg-blue-900/80 border border-blue-400/30 text-yellow-300 rounded-lg text-xs font-bold">
+            <i class="fa-solid fa-handshake"></i> KOMPAK
+          </span>
+        </div>
+      </div>
+
+      <!-- Event Details Card -->
+      <div class="bg-brandBlue-dark/80 border border-blue-500/30 rounded-2xl p-4 backdrop-blur-md grid grid-cols-2 gap-3 text-xs md:text-sm w-full md:w-auto shadow-xl">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-brandYellow text-brandBlue-dark flex items-center justify-center font-bold">
+            <i class="fa-solid fa-calendar-day"></i>
+          </div>
+          <div>
+            <p class="text-gray-400 text-[10px] uppercase font-semibold">Hari / Tanggal</p>
+            <p class="font-bold text-white">Jumat, 9 Okt 2026</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-brandYellow text-brandBlue-dark flex items-center justify-center font-bold">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div>
+            <p class="text-gray-400 text-[10px] uppercase font-semibold">Waktu</p>
+            <p class="font-bold text-white">08.00 - 09.00 WIB</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 col-span-2 border-t border-blue-800/50 pt-2">
+          <div class="w-8 h-8 rounded-lg bg-brandYellow text-brandBlue-dark flex items-center justify-center font-bold">
+            <i class="fa-solid fa-location-dot"></i>
+          </div>
+          <div>
+            <p class="text-gray-400 text-[10px] uppercase font-semibold">Lokasi Start &amp; Finish</p>
+            <p class="font-bold text-white">Gedung Rektorat UII</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT / CENTER: CATEGORY SWITCHER & SPIN WHEEL -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+      
+      <!-- Category Tabs (Fun Walk vs Fun Run) -->
+      <div class="bg-brandBlue/80 p-2 rounded-2xl border border-blue-500/20 grid grid-cols-2 gap-2 shadow-lg">
+        <button id="tabWalk" onclick="adminSwitchCategory('Fun Walk 3K')" 
+                class="py-3 px-4 rounded-xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all duration-300 bg-brandYellow text-brandBlue-dark shadow-md">
+          <i class="fa-solid fa-person-walking text-base"></i>
+          <span>FUN WALK (3K)</span>
+          <span id="badgeWalkCount" class="ml-1 bg-brandBlue-dark text-brandYellow text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+        </button>
+        <button id="tabRun" onclick="adminSwitchCategory('Fun Run 5K')" 
+                class="py-3 px-4 rounded-xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all duration-300 text-gray-300 hover:text-white">
+          <i class="fa-solid fa-person-running text-base"></i>
+          <span>FUN RUN (5K)</span>
+          <span id="badgeRunCount" class="ml-1 bg-blue-950 text-blue-300 text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+        </button>
+      </div>
+
+      <!-- Wheel Display Box -->
+      <div class="bg-brandBlue/50 border border-blue-500/20 rounded-3xl p-6 flex flex-col items-center justify-center relative shadow-2xl min-h-[460px]">
+        
+        <div class="wheel-pointer z-20 mb-[-14px]"></div>
+
+        <!-- Wheel Canvas Container -->
+        <div class="relative w-[300px] h-[300px] sm:w-[360px] sm:h-[360px] md:w-[400px] md:h-[400px] flex items-center justify-center">
+          <canvas id="wheelCanvas" width="400" height="400" class="w-full h-full rounded-full gold-glow"></canvas>
+          
+          <!-- Center Spin Button (Hanya Muncul jika Mode Admin) -->
+          <button id="spinBtn" onclick="triggerAdminSpin()" 
+                  class="hidden absolute w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-brandYellow to-yellow-500 hover:from-yellow-300 hover:to-brandYellow text-brandBlue-dark rounded-full font-black text-base md:text-lg border-4 border-white shadow-2xl transform active:scale-90 transition-all flex flex-col items-center justify-center z-30 group cursor-pointer">
+            <span class="leading-none">SPIN!</span>
+            <i class="fa-solid fa-rotate text-xs mt-1 group-hover:rotate-180 transition-transform duration-500"></i>
+          </button>
+
+          <!-- Viewer Status Badge (Untuk Peserta) -->
+          <div id="viewerCenterBadge" class="absolute w-20 h-20 md:w-24 md:h-24 bg-brandBlue-dark/90 text-brandYellow rounded-full font-extrabold text-xs border-4 border-brandYellow shadow-2xl flex flex-col items-center justify-center z-30 text-center p-2">
+            <i class="fa-solid fa-tower-broadcast text-lg mb-0.5 animate-pulse"></i>
+            <span class="text-[9px] uppercase font-bold text-white">LIVE SYNC</span>
+          </div>
+        </div>
+
+        <!-- Wheel Status Footer -->
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-blue-200">
+          <span class="flex items-center gap-1.5 bg-blue-950/60 px-3 py-1 rounded-full border border-blue-700/40">
+            <i class="fa-solid fa-shield-halved text-green-400"></i> Status: <strong class="text-white">Eligible Only</strong>
+          </span>
+          <span class="flex items-center gap-1.5 bg-blue-950/60 px-3 py-1 rounded-full border border-blue-700/40">
+            <i class="fa-solid fa-users text-brandYellow"></i> Tersisa: <strong id="remainingCount" class="text-brandYellow">0</strong> Peserta
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- RIGHT: WINNERS PODIUM & PARTICIPANT LIST -->
+    <div class="lg:col-span-5 flex flex-col gap-6">
+
+      <!-- Winner Podiums -->
+      <div class="bg-brandBlue/80 border border-blue-500/20 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-blue-800/50 pb-3">
+          <h2 class="text-base md:text-lg font-black text-white flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-brandYellow"></i> Pemenang Doorprize
+          </h2>
+          <span id="currentCategoryLabel" class="text-xs font-bold text-brandYellow bg-brandBlue-dark px-2.5 py-1 rounded-lg border border-yellow-500/30">
+            Fun Walk 3K
+          </span>
+        </div>
+
+        <!-- 3 Winner Cards -->
+        <div class="space-y-3">
+          <!-- Winner 1 -->
+          <div class="bg-gradient-to-r from-yellow-500/20 to-brandBlue-dark/90 border border-yellow-500/50 rounded-2xl p-3 flex items-center gap-3 relative">
+            <div class="w-9 h-9 rounded-xl bg-brandYellow text-brandBlue-dark font-black text-base flex items-center justify-center shadow">1</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[10px] text-yellow-400 font-bold uppercase tracking-wider">Pemenang ke-1</p>
+              <h3 id="winner1Name" class="font-black text-white truncate text-xs md:text-sm">Belum Diundi</h3>
+              <p id="winner1Detail" class="text-[11px] text-gray-400 truncate">-</p>
+            </div>
+          </div>
+
+          <!-- Winner 2 -->
+          <div class="bg-gradient-to-r from-blue-600/20 to-brandBlue-dark/90 border border-blue-400/30 rounded-2xl p-3 flex items-center gap-3 relative">
+            <div class="w-9 h-9 rounded-xl bg-blue-500 text-white font-black text-base flex items-center justify-center shadow">2</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[10px] text-blue-300 font-bold uppercase tracking-wider">Pemenang ke-2</p>
+              <h3 id="winner2Name" class="font-black text-white truncate text-xs md:text-sm">Belum Diundi</h3>
+              <p id="winner2Detail" class="text-[11px] text-gray-400 truncate">-</p>
+            </div>
+          </div>
+
+          <!-- Winner 3 -->
+          <div class="bg-gradient-to-r from-blue-700/20 to-brandBlue-dark/90 border border-blue-400/30 rounded-2xl p-3 flex items-center gap-3 relative">
+            <div class="w-9 h-9 rounded-xl bg-blue-700 text-white font-black text-base flex items-center justify-center shadow">3</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[10px] text-blue-300 font-bold uppercase tracking-wider">Pemenang ke-3</p>
+              <h3 id="winner3Name" class="font-black text-white truncate text-xs md:text-sm">Belum Diundi</h3>
+              <p id="winner3Detail" class="text-[11px] text-gray-400 truncate">-</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reset Button (Admin Only) -->
+        <button id="resetBtn" onclick="adminResetWinners()" class="hidden w-full py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold rounded-xl transition-all items-center justify-center gap-2">
+          <i class="fa-solid fa-rotate-left"></i> Reset Pemenang Kategori Ini
+        </button>
+      </div>
+
+      <!-- Active Participants List Preview -->
+      <div class="bg-brandBlue/80 border border-blue-500/20 rounded-3xl p-5 shadow-2xl flex-1 flex flex-col min-h-[200px]">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs md:text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-brandYellow"></i> Peserta Masuk Roda
+          </h3>
+          <span id="activeListCount" class="text-xs bg-blue-900 text-blue-200 px-2.5 py-0.5 rounded-full font-bold">0 Nama</span>
+        </div>
+        <div id="participantList" class="flex-1 overflow-y-auto max-h-[170px] space-y-1.5 pr-1 text-xs text-gray-300"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- WINNER ANNOUNCEMENT MODAL -->
+  <div id="winnerModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+    <div class="bg-gradient-to-b from-brandBlue to-brandBlue-dark border-2 border-brandYellow rounded-3xl p-6 md:p-8 max-w-md w-full text-center relative gold-glow">
+      <div class="w-16 h-16 md:w-20 md:h-20 bg-brandYellow text-brandBlue-dark rounded-full flex items-center justify-center mx-auto text-3xl md:text-4xl shadow-xl mb-4">
+        <i class="fa-solid fa-crown"></i>
+      </div>
+      <p class="text-xs font-extrabold text-brandYellow uppercase tracking-widest mb-1">SELAMAT KEPADA</p>
+      <h2 id="modalWinnerName" class="text-xl md:text-3xl font-black text-white mb-2">Nama Pemenang</h2>
+      
+      <div class="bg-blue-950/80 border border-blue-700/50 rounded-xl p-3 mb-6 space-y-1 text-xs text-blue-200">
+        <p id="modalWinnerKupon" class="font-bold text-yellow-300">No Kupon: -</p>
+        <p id="modalWinnerUnit" class="truncate">Unit: -</p>
+        <p id="modalWinnerCategory" class="font-semibold text-blue-400">Kategori: -</p>
+      </div>
+
+      <button onclick="closeModal()" class="w-full py-3.5 bg-brandYellow hover:bg-yellow-400 text-brandBlue-dark font-black rounded-xl text-base shadow-lg transition-all cursor-pointer">
+        LANJUTKAN
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ===============================================================
+    // 1. FIREBASE CONFIGURATION (Tempelkan config milik Anda di sini)
+    // ===============================================================
+    const firebaseConfig = {
+      apiKey: "PASTE_YOUR_API_KEY_HERE",
+      authDomain: "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://PASTE_YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "PASTE_YOUR_PROJECT_ID",
+      storageBucket: "PASTE_YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "PASTE_YOUR_SENDER_ID",
+      appId: "PASTE_YOUR_APP_ID"
+    };
+
+    let db = null;
+    let isFirebaseActive = false;
+
+    try {
+      if (firebaseConfig.apiKey !== "PASTE_YOUR_API_KEY_HERE") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        isFirebaseActive = true;
+      }
+    } catch (e) {
+      console.warn("Firebase tidak terkonfigurasi. Berjalan dalam mode lokal offline.");
+    }
+
+    // ROLE DETECTION FROM URL (e.g. index.html?role=admin)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isAdmin = urlParams.get('role') === 'admin';
+
+    // RAW SPREADSHEET DATASET (SELURUH 120 PESERTA)
+    const rawSpreadsheetData = [
+      { no: "1", kupon: "FF2-PN-001", status: "Ineligible-Panitia", nama: "Mono Nanang Sugianto", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "2", kupon: "FF2-PN-002", status: "Ineligible-Panitia", nama: "Siti Amarah", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Run 5K" },
+      { no: "3", kupon: "FF2-PS-001", status: "Ineligible - Penerima Doorprize FF #1", nama: "Syarifah Tri Permata Dewi", unit: "Direktorat Komunikasi Strategis", pilihan: "Fun Run 5K" },
+      { no: "4", kupon: "FF2-PS-002", status: "Eligible", nama: "Sari Cahya Masita", unit: "Direktorat Layanan Akademik", pilihan: "Fun Walk 3K" },
+      { no: "5", kupon: "FF2-PS-003", status: "Eligible", nama: "Rizkiyatul Maulidiyah", unit: "Direktorat Inovasi, Bisnis, dan Kewirausahaan", pilihan: "Fun Walk 3K" },
+      { no: "6", kupon: "FF2-PS-004", status: "Eligible", nama: "Rahma Nur Fitria", unit: "Badan Inisiatif Strategis dan Keberlanjutan", pilihan: "Fun Walk 3K" },
+      { no: "7", kupon: "FF2-PS-005", status: "Ineligible - Penerima Doorprize FF #1", nama: "Heri Susanto", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Walk 3K" },
+      { no: "8", kupon: "FF2-PN-003", status: "Ineligible-Panitia", nama: "Ari Prasetyo Wibowo", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Run 5K" },
+      { no: "9", kupon: "FF2-PN-004", status: "Ineligible-Panitia", nama: "Dwi Purwanti", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "10", kupon: "FF2-PS-006", status: "Eligible", nama: "Nawunda Dzuhri Astuti", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Walk 3K" },
+      { no: "11", kupon: "FF2-PS-007", status: "Eligible", nama: "Ihsanta Dwi Nugrahanta", unit: "Direktorat Keagamaan dan Keislaman", pilihan: "Fun Walk 3K" },
+      { no: "12", kupon: "FF2-PS-008", status: "Eligible", nama: "Heru Ardiyanto", unit: "Direktorat Komunikasi Strategis", pilihan: "Fun Run 5K" },
+      { no: "13", kupon: "FF2-PS-009", status: "Ineligible - Penerima Doorprize FF #1", nama: "Amin Nuriidla", unit: "Direktorat Kemahasiswaan", pilihan: "Fun Run 5K" },
+      { no: "14", kupon: "FF2-PS-010", status: "Eligible", nama: "Afta Raasikh Editia", unit: "Badan Inisiatif Strategis dan Keberlanjutan", pilihan: "Fun Walk 3K" },
+      { no: "15", kupon: "FF2-PS-011", status: "Eligible", nama: "Desy Ekowati Listia Dewi", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Walk 3K" },
+      { no: "16", kupon: "FF2-PS-012", status: "Eligible", nama: "Asyiah", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Walk 3K" },
+      { no: "17", kupon: "FF2-PS-013", status: "Eligible", nama: "Nisrina Kamilia Salsabila", unit: "Direktorat Laboratorium Terpadu", pilihan: "Fun Run 5K" },
+      { no: "18", kupon: "FF2-PS-014", status: "Ineligible - Penerima Doorprize FF #1", nama: "Novita Wulan Sari", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Run 5K" },
+      { no: "19", kupon: "FF2-PS-015", status: "Eligible", nama: "Nikmah Hayati", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Run 5K" },
+      { no: "20", kupon: "FF2-PS-016", status: "Eligible", nama: "Nandita Faiza", unit: "Direktorat Kemitraan dan Urusan Internasional", pilihan: "Fun Walk 3K" },
+      { no: "21", kupon: "FF2-PS-017", status: "Eligible", nama: "Zahrah Ibnu Salim", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Run 5K" },
+      { no: "22", kupon: "FF2-PS-018", status: "Eligible", nama: "Yulirohyami", unit: "Direktorat Layanan Akademik", pilihan: "Fun Walk 3K" },
+      { no: "23", kupon: "FF2-PS-019", status: "Eligible", nama: "Belila Mega Utari", unit: "Direktorat Layanan Akademik", pilihan: "Fun Walk 3K" },
+      { no: "24", kupon: "FF2-PS-020", status: "Eligible", nama: "Nabilah Salma Khoirunnisa", unit: "Direktorat Layanan Akademik", pilihan: "Fun Walk 3K" },
+      { no: "25", kupon: "FF2-PS-021", status: "Eligible", nama: "Dwi Susilo Nugroho", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "26", kupon: "FF2-PN-005", status: "Ineligible-Panitia", nama: "Martina Nur Hartini", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "27", kupon: "FF2-PS-022", status: "Eligible", nama: "Sunu Aji", unit: "Badan Penjaminan Mutu", pilihan: "Fun Walk 3K" },
+      { no: "28", kupon: "FF2-PS-023", status: "Eligible", nama: "Al Katitanji", unit: "Direktorat Keagamaan dan Keislaman", pilihan: "Fun Walk 3K" },
+      { no: "29", kupon: "FF2-PN-006", status: "Ineligible-Panitia", nama: "Nur Sumiyono Saadi", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Run 5K" },
+      { no: "30", kupon: "FF2-PN-007", status: "Ineligible-Panitia", nama: "Mutiara Nur Zulaikha", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "31", kupon: "FF2-PS-024", status: "Eligible", nama: "Lia Uzhma Nurdina", unit: "Direktorat Kemahasiswaan", pilihan: "Fun Walk 3K" },
+      { no: "32", kupon: "FF2-PS-025", status: "Eligible", nama: "Nur Alifah", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "33", kupon: "FF2-PS-026", status: "Eligible", nama: "Shafira Khairunnisa Putri", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "34", kupon: "FF2-PS-027", status: "Eligible", nama: "Bekti Noorhayati", unit: "Badan Penjaminan Mutu", pilihan: "Fun Walk 3K" },
+      { no: "35", kupon: "FF2-PS-028", status: "Eligible", nama: "Dedy Irawan", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "36", kupon: "FF2-PS-029", status: "Ineligible - Penerima Doorprize FF #1", nama: "Fachri Nurmay Rohmah Dinnul Haq", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "37", kupon: "FF2-PS-030", status: "Eligible", nama: "Emma Wahyuningtyas", unit: "Direktorat Layanan Akademik", pilihan: "Fun Walk 3K" },
+      { no: "38", kupon: "FF2-PS-031", status: "Eligible", nama: "Dimas Danu Budi Pratikto", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "39", kupon: "FF2-PS-032", status: "Ineligible - Penerima Doorprize FF #1", nama: "Dhenta Ulung Wisesa", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "40", kupon: "FF2-PS-033", status: "Eligible", nama: "Endro Mustofa", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "41", kupon: "FF2-PS-034", status: "Eligible", nama: "Adhi Wiratomo", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "42", kupon: "FF2-PS-035", status: "Eligible", nama: "Marni Utama", unit: "Direktorat Manajemen Pengetahuan", pilihan: "Fun Walk 3K" },
+      { no: "43", kupon: "FF2-PS-036", status: "Eligible", nama: "Alfandya", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "44", kupon: "FF2-PS-037", status: "Eligible", nama: "Pinkan Nabilla", unit: "Direktorat Admisi dan Promosi", pilihan: "Fun Walk 3K" },
+      { no: "45", kupon: "FF2-PS-038", status: "Eligible", nama: "Dylia Putri Ramadhani", unit: "Direktorat Admisi dan Promosi", pilihan: "Fun Walk 3K" },
+      { no: "46", kupon: "FF2-PS-039", status: "Eligible", nama: "Siti Nurkhalizah", unit: "Direktorat Admisi dan Promosi", pilihan: "Fun Walk 3K" },
+      { no: "47", kupon: "FF2-PS-040", status: "Eligible", nama: "Zulkarnaen Dwi Syahputra", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "48", kupon: "FF2-PS-041", status: "Eligible", nama: "Andika Syah Putra Pratama", unit: "Direktorat Admisi dan Promosi", pilihan: "Fun Walk 3K" },
+      { no: "49", kupon: "FF2-PS-042", status: "Ineligible - Penerima Doorprize FF #1", nama: "Akmal Faradise", unit: "Direktorat Manajemen Pengetahuan", pilihan: "Fun Walk 3K" },
+      { no: "50", kupon: "FF2-PS-043", status: "Eligible", nama: "Endro Mustofa", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "51", kupon: "FF2-PS-044", status: "Eligible", nama: "Heri Susanto", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Walk 3K" },
+      { no: "52", kupon: "FF2-PS-045", status: "Eligible", nama: "Mariana Oktavianti", unit: "Direktorat Admisi dan Promosi", pilihan: "Fun Walk 3K" },
+      { no: "53", kupon: "FF2-PS-046", status: "Eligible", nama: "Andri Heru Saputra", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "54", kupon: "FF2-PS-047", status: "Eligible", nama: "Dian Sigit Prastowo", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "55", kupon: "FF2-PS-048", status: "Eligible", nama: "Riska Yunita Ayu Wulandari", unit: "Direktorat Admisi dan Promosi", pilihan: "Fun Walk 3K" },
+      { no: "56", kupon: "FF2-PS-049", status: "Eligible", nama: "Reyhandri Muhammad Naufal", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "57", kupon: "FF2-PS-050", status: "Eligible", nama: "Raihan Rafi Malik", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "58", kupon: "FF2-PS-051", status: "Eligible", nama: "Damas Baik Ariansyah", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "59", kupon: "FF2-PS-052", status: "Ineligible - Penerima Doorprize FF #1", nama: "Feri Nurlisa", unit: "Sekretaris Universitas", pilihan: "Fun Walk 3K" },
+      { no: "60", kupon: "FF2-PS-053", status: "Eligible", nama: "Mei Nurvitasari", unit: "Direktorat Penelitian dan Pengabdian Masyarakat", pilihan: "Fun Walk 3K" },
+      { no: "61", kupon: "FF2-PS-054", status: "Eligible", nama: "Mifta Fauzia Rahma", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "62", kupon: "FF2-PS-055", status: "Ineligible - Penerima Doorprize FF #1", nama: "Muhammad Al Hudrizi", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "63", kupon: "FF2-PS-056", status: "Eligible", nama: "Raden Miftakhurozak Budi Nugraha", unit: "Direktorat Layanan Akademik", pilihan: "Fun Walk 3K" },
+      { no: "64", kupon: "FF2-PS-057", status: "Eligible", nama: "Yudiyanto", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "65", kupon: "FF2-PS-058", status: "Eligible", nama: "Pangesti Rahman", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Run 5K" },
+      { no: "66", kupon: "FF2-PS-059", status: "Eligible", nama: "Devi Sulistyaningrum", unit: "Direktorat Penelitian dan Pengabdian Masyarakat", pilihan: "Fun Walk 3K" },
+      { no: "67", kupon: "FF2-PS-060", status: "Eligible", nama: "Ata Muftihah", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "68", kupon: "FF2-PS-061", status: "Eligible", nama: "Devi Sulistyaningrum", unit: "Direktorat Penelitian dan Pengabdian Masyarakat", pilihan: "Fun Walk 3K" },
+      { no: "69", kupon: "FF2-PS-062", status: "Eligible", nama: "Putut S", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "70", kupon: "FF2-PS-063", status: "Eligible", nama: "Ginanjar Warasta", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Run 5K" },
+      { no: "71", kupon: "FF2-PS-064", status: "Eligible", nama: "Fitriyanto", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "72", kupon: "FF2-PS-065", status: "Eligible", nama: "Muhammad Farrij Rifai", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "73", kupon: "FF2-PS-066", status: "Eligible", nama: "Farenisa Putri Nugroho", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Walk 3K" },
+      { no: "74", kupon: "FF2-PS-067", status: "Eligible", nama: "Bambang Pardianto", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "75", kupon: "FF2-PS-068", status: "Eligible", nama: "Suparyitno", unit: "Direktorat Manajemen Pengetahuan", pilihan: "Fun Walk 3K" },
+      { no: "76", kupon: "FF2-PS-069", status: "Eligible", nama: "Muhammad Taufiq H M", unit: "Lain-Lain", pilihan: "Fun Run 5K" },
+      { no: "77", kupon: "FF2-PS-070", status: "Eligible", nama: "Aris Rusdan Perwira", unit: "Direktorat Pengembangan Akademik", pilihan: "Fun Walk 3K" },
+      { no: "78", kupon: "FF2-PS-071", status: "Eligible", nama: "Rizka Nur Annisa", unit: "Lain-Lain", pilihan: "Fun Run 5K" },
+      { no: "79", kupon: "FF2-PS-072", status: "Eligible", nama: "Amelia Alfadillah", unit: "Lain-Lain", pilihan: "Fun Run 5K" },
+      { no: "80", kupon: "FF2-PS-073", status: "Eligible", nama: "Farhan Kurnia", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "81", kupon: "FF2-PS-074", status: "Eligible", nama: "Sunartin", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "82", kupon: "FF2-PS-075", status: "Eligible", nama: "Erna Harmawati", unit: "Direktorat Manajemen Pengetahuan", pilihan: "Fun Walk 3K" },
+      { no: "83", kupon: "FF2-PS-076", status: "Eligible", nama: "Ida Ayu Sulistya", unit: "Direktorat Laboratorium Terpadu", pilihan: "Fun Walk 3K" },
+      { no: "84", kupon: "FF2-PS-077", status: "Eligible", nama: "Dwi Erikawati", unit: "Direktorat Laboratorium Terpadu", pilihan: "Fun Walk 3K" },
+      { no: "85", kupon: "FF2-PS-078", status: "Eligible", nama: "Laila Syarfina Salma", unit: "Direktorat Laboratorium Terpadu", pilihan: "Fun Walk 3K" },
+      { no: "86", kupon: "FF2-PS-079", status: "Eligible", nama: "Ainun Nisa Zella", unit: "Direktorat Laboratorium Terpadu", pilihan: "Fun Walk 3K" },
+      { no: "87", kupon: "FF2-PS-080", status: "Eligible", nama: "Ikma Nur Faizah", unit: "Direktorat Kemahasiswaan", pilihan: "Fun Walk 3K" },
+      { no: "88", kupon: "FF2-PS-081", status: "Eligible", nama: "Elok Luthfiyyah Hady", unit: "Badan Penjaminan Mutu", pilihan: "Fun Walk 3K" },
+      { no: "89", kupon: "FF2-PS-082", status: "Eligible", nama: "Linda Agustina", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "90", kupon: "FF2-PS-083", status: "Eligible", nama: "Wakhyu Novi Setiyaning Asih", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "91", kupon: "FF2-PS-084", status: "Eligible", nama: "Herfi Zidatul Husna", unit: "Direktorat Keuangan dan Anggaran", pilihan: "Fun Walk 3K" },
+      { no: "92", kupon: "FF2-PS-085", status: "Eligible", nama: "Logi Ujiasari", unit: "Direktorat Penelitian dan Pengabdian Masyarakat", pilihan: "Fun Walk 3K" },
+      { no: "93", kupon: "FF2-PS-086", status: "Eligible", nama: "Tungky Adi Pradana", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "94", kupon: "FF2-PS-087", status: "Ineligible - Penerima Doorprize FF #1", nama: "Zain Jamal Husain", unit: "Badan Sistem Informasi", pilihan: "Fun Run 5K" },
+      { no: "95", kupon: "FF2-PS-088", status: "Eligible", nama: "Syukriyani Rochmawati", unit: "Lain-Lain", pilihan: "Fun Run 5K" },
+      { no: "96", kupon: "FF2-PS-089", status: "Eligible", nama: "Dian Ekayanti", unit: "Sekretaris Universitas", pilihan: "Fun Run 5K" },
+      { no: "97", kupon: "FF2-PS-090", status: "Eligible", nama: "Awaluddin Nurmiyanto", unit: "Sekretaris Universitas", pilihan: "Fun Run 5K" },
+      { no: "98", kupon: "FF2-PS-091", status: "Eligible", nama: "Handaya Suhari", unit: "Sekretaris Universitas", pilihan: "Fun Walk 3K" },
+      { no: "99", kupon: "FF2-PS-092", status: "Eligible", nama: "Sri Wikanti", unit: "Sekretaris Universitas", pilihan: "Fun Walk 3K" },
+      { no: "100", kupon: "FF2-PS-093", status: "Eligible", nama: "Tatik Herawati", unit: "Direktorat Manajemen Pengetahuan", pilihan: "Fun Walk 3K" },
+      { no: "101", kupon: "FF2-PS-094", status: "Eligible", nama: "Dwi Novita Rachmani", unit: "Sekretaris Universitas", pilihan: "Fun Walk 3K" },
+      { no: "102", kupon: "FF2-PS-095", status: "Eligible", nama: "Tatik Herawati", unit: "Direktorat Manajemen Pengetahuan", pilihan: "Fun Walk 3K" },
+      { no: "103", kupon: "FF2-PS-096", status: "Eligible", nama: "Istiyar Mifta Bing Susanto", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "104", kupon: "FF2-PS-097", status: "Eligible", nama: "Tria Rejeki Sholikhah", unit: "Direktorat Kemitraan dan Urusan Internasional", pilihan: "Fun Walk 3K" },
+      { no: "105", kupon: "FF2-PS-098", status: "Eligible", nama: "Intan Ayu Nur Wegayanti", unit: "Direktorat Kemitraan dan Urusan Internasional", pilihan: "Fun Walk 3K" },
+      { no: "106", kupon: "FF2-PS-099", status: "Eligible", nama: "Citra Nurlaily Anggara", unit: "Direktorat Kemitraan dan Urusan Internasional", pilihan: "Fun Walk 3K" },
+      { no: "107", kupon: "FF2-PS-100", status: "Eligible", nama: "Deni Ambarwati", unit: "Direktorat Kemitraan dan Urusan Internasional", pilihan: "Fun Walk 3K" },
+      { no: "108", kupon: "FF2-PS-101", status: "Eligible", nama: "Cinthaka Vania Afandi", unit: "Direktorat Kemitraan dan Urusan Internasional", pilihan: "Fun Walk 3K" },
+      { no: "109", kupon: "FF2-PS-102", status: "Eligible", nama: "Ayska Rahma Daffadilla", unit: "Direktorat Kemitraan dan Urusan Internasional", pilihan: "Fun Walk 3K" },
+      { no: "110", kupon: "FF2-PS-103", status: "Eligible", nama: "Lungit Marsudi Wening", unit: "Badan Sistem Informasi", pilihan: "Fun Walk 3K" },
+      { no: "111", kupon: "FF2-PS-104", status: "Eligible", nama: "Muhammad Arsyik Kurniawan S.", unit: "Direktorat Laboratorium Terpadu", pilihan: "Fun Run 5K" },
+      { no: "112", kupon: "FF2-PS-105", status: "Eligible", nama: "Rifqi Sasmita Hadi", unit: "Direktorat Komunikasi Strategis", pilihan: "Fun Walk 3K" },
+      { no: "113", kupon: "FF2-PS-106", status: "Eligible", nama: "Akhirul Kurniawan", unit: "Direktorat Kesehatan, Keselamatan Kerja, dan Lingkungan Hidup", pilihan: "Fun Walk 3K" },
+      { no: "114", kupon: "FF2-PN-008", status: "Ineligible-Panitia", nama: "Fidia Nur Cholifah", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "115", kupon: "FF2-PN-009", status: "Ineligible-Panitia", nama: "Wahyu Wijiyanti", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "116", kupon: "FF2-PN-010", status: "Ineligible-Panitia", nama: "Muhammad Rafif Zaen", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Run 5K" },
+      { no: "117", kupon: "FF2-PS-107", status: "Eligible", nama: "Parwanto", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Run 5K" },
+      { no: "118", kupon: "FF2-PN-011", status: "Ineligible-Panitia", nama: "Amalina Nur Ramadhani", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "119", kupon: "FF2-PN-012", status: "Ineligible-Panitia", nama: "Anita Kurniati", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Walk 3K" },
+      { no: "120", kupon: "FF2-PN-013", status: "Ineligible-Panitia", nama: "Hafiyyan Faza Santoso", unit: "Direktorat Sumber Daya Manusia/Sekolah Kepemimpinan", pilihan: "Fun Run 5K" }
+    ];
+
+    // STATE VARIABLES
+    let currentCategory = "Fun Walk 3K";
+    let activeParticipants = [];
+    let winnersData = {
+      "Fun Walk 3K": [],
+      "Fun Run 5K": []
+    };
+
+    let currentRotation = 0;
+    let isSpinning = false;
+    let pendingWinner = null;
+    let lastProcessedSpinId = null;
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioClass) audioCtx = new AudioClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTickSound() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+      } catch(e){}
+    }
+
+    function playFanfare() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.18, ctx.currentTime + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.12 + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.12);
+          osc.stop(ctx.currentTime + idx * 0.12 + 0.35);
+        });
+      } catch(e){}
+    }
+
+    // INITIALIZATION
+    function initApp() {
+      setupRolesUI();
+      updateCategoryCounts();
+      switchCategoryLocal("Fun Walk 3K");
+
+      if (isFirebaseActive) {
+        listenToFirebaseEvents();
+      }
+    }
+
+    function setupRolesUI() {
+      const roleBadge = document.getElementById('roleBadge');
+      const spinBtn = document.getElementById('spinBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const viewerCenterBadge = document.getElementById('viewerCenterBadge');
+
+      if (isAdmin) {
+        roleBadge.className = "inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-400 text-brandBlue-dark font-black text-xs rounded-full uppercase shadow";
+        roleBadge.innerHTML = `<i class="fa-solid fa-user-gear"></i> Mode Admin / Operator`;
+        spinBtn.classList.remove('hidden');
+        resetBtn.classList.remove('hidden');
+        resetBtn.classList.add('flex');
+        viewerCenterBadge.classList.add('hidden');
+      } else {
+        roleBadge.className = "inline-flex items-center gap-1.5 px-3 py-1 bg-blue-900 text-blue-200 border border-blue-400/40 text-xs font-bold rounded-full uppercase";
+        roleBadge.innerHTML = `<i class="fa-solid fa-eye"></i> Mode Viewer / Peserta`;
+        spinBtn.classList.add('hidden');
+        resetBtn.classList.add('hidden');
+        viewerCenterBadge.classList.remove('hidden');
+      }
+    }
+
+    function updateCategoryCounts() {
+      const walkEligible = rawSpreadsheetData.filter(d => d.status.trim().toLowerCase() === 'eligible' && d.pilihan.includes('Walk')).length;
+      const runEligible = rawSpreadsheetData.filter(d => d.status.trim().toLowerCase() === 'eligible' && d.pilihan.includes('Run')).length;
+      document.getElementById('badgeWalkCount').innerText = walkEligible;
+      document.getElementById('badgeRunCount').innerText = runEligible;
+    }
+
+    function switchCategoryLocal(cat) {
+      currentCategory = cat;
+      const isWalk = cat === "Fun Walk 3K";
+      const tabWalk = document.getElementById('tabWalk');
+      const tabRun = document.getElementById('tabRun');
+
+      if (isWalk) {
+        tabWalk.className = "py-3 px-4 rounded-xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all duration-300 bg-brandYellow text-brandBlue-dark shadow-md";
+        tabRun.className = "py-3 px-4 rounded-xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all duration-300 text-gray-300 hover:text-white";
+      } else {
+        tabRun.className = "py-3 px-4 rounded-xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all duration-300 bg-brandYellow text-brandBlue-dark shadow-md";
+        tabWalk.className = "py-3 px-4 rounded-xl font-black text-xs md:text-sm flex items-center justify-center gap-2 transition-all duration-300 text-gray-300 hover:text-white";
+      }
+
+      document.getElementById('currentCategoryLabel').innerText = cat;
+
+      const catWinners = winnersData[cat];
+      const winnerKuponSet = new Set(catWinners.map(w => w.kupon));
+
+      activeParticipants = rawSpreadsheetData.filter(item => {
+        const isEligible = item.status.trim().toLowerCase() === 'eligible';
+        const isMatchCategory = isWalk ? item.pilihan.includes('Walk') : item.pilihan.includes('Run');
+        return isEligible && isMatchCategory && !winnerKuponSet.has(item.kupon);
+      });
+
+      document.getElementById('remainingCount').innerText = activeParticipants.length;
+      renderParticipantList();
+      renderWinnerPodiums();
+
+      const canvas = document.getElementById('wheelCanvas');
+      canvas.style.transition = 'none';
+      canvas.style.transform = `rotate(0deg)`;
+      currentRotation = 0;
+
+      drawWheel();
+    }
+
+    function adminSwitchCategory(cat) {
+      if (isSpinning) return;
+      switchCategoryLocal(cat);
+
+      if (isAdmin && isFirebaseActive) {
+        db.ref('funtasticState/category').set(cat);
+      }
+    }
+
+    function renderParticipantList() {
+      const container = document.getElementById('participantList');
+      document.getElementById('activeListCount').innerText = `${activeParticipants.length} Nama`;
+      container.innerHTML = "";
+
+      if (activeParticipants.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-gray-400 italic">Semua peserta telah terundi.</div>`;
+        return;
+      }
+
+      activeParticipants.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = "bg-blue-950/40 border border-blue-800/40 rounded-xl p-2 flex items-center justify-between";
+        row.innerHTML = `
+          <div class="truncate pr-2">
+            <span class="font-bold text-white">${idx + 1}. ${p.nama}</span>
+            <span class="text-[10px] text-gray-400 block truncate">${p.unit}</span>
+          </div>
+          <span class="text-[10px] font-mono text-yellow-400 bg-brandBlue px-2 py-0.5 rounded border border-yellow-500/30 shrink-0">${p.kupon}</span>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function renderWinnerPodiums() {
+      const winners = winnersData[currentCategory];
+      for (let i = 1; i <= 3; i++) {
+        const nameEl = document.getElementById(`winner${i}Name`);
+        const detailEl = document.getElementById(`winner${i}Detail`);
+        const winnerObj = winners[i - 1];
+
+        if (winnerObj) {
+          nameEl.innerText = winnerObj.nama;
+          detailEl.innerText = `${winnerObj.kupon} • ${winnerObj.unit}`;
+        } else {
+          nameEl.innerText = "Belum Diundi";
+          detailEl.innerText = "-";
+        }
+      }
+    }
+
+    function drawWheel() {
+      const canvas = document.getElementById('wheelCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const radius = width / 2 - 8;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const numSlices = activeParticipants.length;
+      if (numSlices === 0) {
+        ctx.fillStyle = '#0A2540';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#FFC700';
+        ctx.font = 'bold 15px Plus Jakarta Sans';
+        ctx.textAlign = 'center';
+        ctx.fillText('TIDAK ADA DATA PESERTA', centerX, centerY);
+        return;
+      }
+
+      const arc = (2 * Math.PI) / numSlices;
+
+      for (let i = 0; i < numSlices; i++) {
+        const angle = i * arc;
+        ctx.fillStyle = (i % 2 === 0) ? '#0A2540' : '#FFC700';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, angle, angle + arc, false);
+        ctx.lineTo(centerX, centerY);
+        ctx.fill();
+
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#081A2F';
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = (i % 2 === 0) ? '#FFFFFF' : '#0A2540';
+        ctx.font = 'bold 12px Plus Jakarta Sans';
+        
+        const label = activeParticipants[i].nama;
+        const truncated = label.length > 18 ? label.substring(0, 16) + '..' : label;
+        ctx.fillText(truncated, radius - 18, 4);
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#FFC700';
+      ctx.stroke();
+    }
+
+    // TRIGGER SPIN FOR ADMIN
+    function triggerAdminSpin() {
+      if (!isAdmin) return;
+      if (isSpinning) return;
+      
+      const numSlices = activeParticipants.length;
+      if (numSlices === 0) {
+        alert("Tidak ada peserta eligible tersisa untuk kategori ini!");
+        return;
+      }
+      if (winnersData[currentCategory].length >= 3) {
+        alert("Kategori ini sudah memiliki 3 Pemenang! Silakan reset jika ingin mengundi ulang.");
+        return;
+      }
+
+      const winnerIndex = Math.floor(Math.random() * numSlices);
+      const winnerObj = activeParticipants[winnerIndex];
+      const spinId = Date.now();
+
+      if (isFirebaseActive) {
+        db.ref('funtasticState/spinEvent').set({
+          spinId: spinId,
+          category: currentCategory,
+          winnerIndex: winnerIndex,
+          winnerKupon: winnerObj.kupon
+        });
+      } else {
+        executeSpinAnimation(winnerIndex, winnerObj);
+      }
+    }
+
+    // EXECUTE REALTIME SPIN ANIMATION
+    function executeSpinAnimation(winnerIndex, winnerObj) {
+      if (isSpinning) return;
+      isSpinning = true;
+      pendingWinner = winnerObj;
+
+      const numSlices = activeParticipants.length;
+      const arcDeg = 360 / numSlices;
+      const sliceCenterDeg = (winnerIndex + 0.5) * arcDeg;
+      const targetModulo = (270 - sliceCenterDeg + 360) % 360;
+
+      const extraSpins = 360 * 5;
+      const currentMod = currentRotation % 360;
+      let addedRotation = extraSpins + (targetModulo - currentMod);
+      if (addedRotation < extraSpins) addedRotation += 360;
+
+      currentRotation += addedRotation;
+
+      const canvas = document.getElementById('wheelCanvas');
+      canvas.style.transition = 'transform 4.5s cubic-bezier(0.15, 0.85, 0.15, 1)';
+      canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+      let tickTimer = setInterval(() => playTickSound(), 150);
+
+      setTimeout(() => {
+        clearInterval(tickTimer);
+        isSpinning = false;
+        showWinnerModal(pendingWinner);
+      }, 4600);
+    }
+
+    // FIREBASE REALTIME LISTENERS
+    function listenToFirebaseEvents() {
+      db.ref('funtasticState/category').on('value', snapshot => {
+        const cat = snapshot.val();
+        if (cat && cat !== currentCategory) {
+          switchCategoryLocal(cat);
+        }
+      });
+
+      db.ref('funtasticState/spinEvent').on('value', snapshot => {
+        const data = snapshot.val();
+        if (data && data.spinId && data.spinId !== lastProcessedSpinId) {
+          lastProcessedSpinId = data.spinId;
+          
+          if (data.category !== currentCategory) {
+            switchCategoryLocal(data.category);
+          }
+
+          const targetIndex = data.winnerIndex;
+          const targetWinner = activeParticipants[targetIndex] || activeParticipants.find(p => p.kupon === data.winnerKupon);
+
+          if (targetWinner) {
+            executeSpinAnimation(targetIndex, targetWinner);
+          }
+        }
+      });
+
+      db.ref('funtasticState/winners').on('value', snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          winnersData = data;
+          switchCategoryLocal(currentCategory);
+        }
+      });
+    }
+
+    // MODAL & CELEBRATION
+    function showWinnerModal(winner) {
+      playFanfare();
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 } });
+      }
+
+      document.getElementById('modalWinnerName').innerText = winner.nama;
+      document.getElementById('modalWinnerKupon').innerText = `No Kupon: ${winner.kupon}`;
+      document.getElementById('modalWinnerUnit').innerText = `Unit: ${winner.unit}`;
+      document.getElementById('modalWinnerCategory').innerText = `Kategori: ${winner.pilihan}`;
+
+      const modal = document.getElementById('winnerModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      if (pendingWinner) {
+        if (!winnersData[currentCategory].some(w => w.kupon === pendingWinner.kupon)) {
+          winnersData[currentCategory].push(pendingWinner);
+          if (isAdmin && isFirebaseActive) {
+            db.ref('funtasticState/winners').set(winnersData);
+          }
+        }
+        pendingWinner = null;
+      }
+
+      const modal = document.getElementById('winnerModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+
+      switchCategoryLocal(currentCategory);
+    }
+
+    function adminResetWinners() {
+      if (!isAdmin) return;
+      if (confirm(`Reset semua pemenang untuk ${currentCategory}?`)) {
+        winnersData[currentCategory] = [];
+        if (isFirebaseActive) {
+          db.ref('funtasticState/winners').set(winnersData);
+        }
+        switchCategoryLocal(currentCategory);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
